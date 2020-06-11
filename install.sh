@@ -1,4 +1,3 @@
-#!/bin/sh -e
 
 newplugin=false
 scriptdir="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
@@ -9,8 +8,10 @@ function setupDMTCP {
 		echo "export SINGULARITY_DMTCP=$scriptdir" | sudo tee -a /etc/profile
 	fi
 	cd $scriptdir/dmtcp/
-	./configure
+	./configure --enable-debug
 	make -j
+	cd contrib/split-cuda/
+	make
 }
 
 # Build plugin for Singularity version <=3.5
