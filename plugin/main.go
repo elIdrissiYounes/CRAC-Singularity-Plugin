@@ -18,7 +18,7 @@ import (
 // This symbol is accessed by the plugin framework to initialize the plugin.
 var Plugin = pluginapi.Plugin{
 	Manifest: pluginapi.Manifest{
-		Name:        "lancium.com/dmtcp-singularity",
+		Name:        "lancium.com/crac-singularity",
 		Author:      "Lancium",
 		Version:     "0.0.2",
 		Description: "This is a plugin to add checkpointing to Singularity with DMTCP",
