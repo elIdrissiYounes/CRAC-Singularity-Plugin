@@ -12,3 +12,9 @@ This is just a simple plugin that may be installed in Singularity versions < 3.5
 4. To run a checkpoint then stop the program and container instance, run `singularity checkpoint stop {name}`.
 
 More information is available on the wiki.
+
+
+
+
+
+git submodule update --init --recursive
