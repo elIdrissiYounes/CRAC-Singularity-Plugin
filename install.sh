@@ -1,10 +1,11 @@
+#!/bin/bash
 newplugin=false
 scriptdir="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 # Build and set environment variable for DMTCP location.
 function setupDMTCP {
-	if [[ -z "${SINGULARITY_DMTCP}" ]]; then
-		echo "export SINGULARITY_DMTCP=$scriptdir" | sudo tee -a /etc/profile
+	if [[ -z "${SINGULARITY_CRAC}" ]]; then
+		echo "export SINGULARITY_CRAC=$scriptdir" | sudo tee -a /etc/profile
 	fi
 	cd $scriptdir/CRAC-early-development/
 	./configure --enable-timing
