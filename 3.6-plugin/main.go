@@ -19,12 +19,11 @@ import (
 // This symbol is accessed by the plugin framework to initialize the plugin.
 var Plugin = pluginapi.Plugin{
 	Manifest: pluginapi.Manifest{
-		Name:        "lancium.com/crac-singularity",
+		Name:        "lancium.com/dmtcp-singularity",
 		Author:      "Lancium",
 		Version:     "0.1.1",
-		Description: "This is a plugin to add cuda checkpointing to Singularity with DMTCP",
+		Description: "This is a plugin to add checkpointing to Singularity with DMTCP",
 	},
-	
 	Callbacks: []pluginapi.Callback{
 		(clicallback.Command)(callbackPluginCmd),
 		(clicallback.SingularityEngineConfig)(callbackDMTCP),
@@ -34,7 +33,7 @@ var Plugin = pluginapi.Plugin{
 var(
 	BindPaths []string
 )
-var isCheckpoint = false 
+var isCheckpoint = false
 
 func callbackPluginCmd(manager *cmdline.CommandManager) {
 	// create command: singularity checkpoint
@@ -69,11 +68,11 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 	// create command: singularity checkpoint start
 	var checkpointStartCmd = &cobra.Command{
 		DisableFlagsInUseLine: true,
-		Args:                  cobra.MinimumNArgs(2),
+		Args:                  cobra.MinimumNArgs(3),
 		Use:                   "start [args ...]",
 		Short:                 "Start an instance",
 		Long:                  "Start an instance with checkpoint capabilities",
-		Example:               "singularity checkpoint start <container> <name>",
+		Example:               "singularity checkpoint start <container> <name> <checkpoint directory>",
 		Run: func(cmd *cobra.Command, args []string) {
 			isCheckpoint = true
 			//init checkpoint
@@ -149,6 +148,44 @@ func callbackPluginCmd(manager *cmdline.CommandManager) {
 	}
 	// register checkpoint exec command
 	manager.RegisterSubCmd(checkpointCmd, checkpointExecCmd)
+	checkpointExecCmd.Flags().AddFlagSet(execCmd.Flags())
+
+	// NEW!!!
+	// create command: singularity checkpoint job_start
+	// both starts an instance and runs a command
+	var checkpointJobRunCmd = &cobra.Command{
+		DisableFlagsInUseLine: true,
+		Args:                  cobra.MinimumNArgs(3),
+		Use:                   "job_run [args ...]",
+		Short:                 "Start an instance and execute a program",
+		Long:                  "Create an instance with DMTCP ready, then start a program with the DMTCP wrappers",
+		Example:               "singularity checkpoint job_run <container> <name> <command>",
+		Run: func(cmd *cobra.Command, args []string) {
+			isCheckpoint = true
+			// run the start command with the container img and name
+			checkpointStartCmd.Run(checkpointStartCmd, args[0:2])
+			// format a slice by copying and modifying single element
+			execSlice := make([]string, len(args))
+			copy(execSlice, args)
+			execSlice[1] = "instance://"+execSlice[1]
+			// append singularity command on subset of modified slice to fit
+			cmdSlice := append([]string{"checkpoint", "exec"}, execSlice[1:]...)
+			// actually exec
+			ctkCmd := exec.Command("singularity", cmdSlice[:]...)
+			ctkCmd.Stdout = os.Stdout
+			ctkCmd.Stderr = os.Stderr
+			ctkCmd.Start()
+			ctkCmd.Wait()
+			// stop instance
+			checkpointStopCmd.Run(checkpointStopCmd, args[1:2])
+		},
+		TraverseChildren: true,
+	}
+	// register checkpoint job_run command
+	manager.RegisterSubCmd(checkpointCmd, checkpointJobRunCmd)
+	// must register instance start and exec's, hopefully not overlap/destroying
+	checkpointJobRunCmd.Flags().AddFlagSet(instanceStartCmd.Flags())
+	checkpointJobRunCmd.Flags().AddFlagSet(execCmd.Flags())
 
 	// create command: singularity checkpoint run
 	var checkpointRunCmd = &cobra.Command{
@@ -219,27 +256,32 @@ func callbackDMTCP(common *config.Common) {
 	if isCheckpoint{
 		dmtcpLocation := os.Getenv("SINGULARITY_DMTCP")
 		if(dmtcpLocation == ""){
-			sylog.Errorf("No DMTCP location found. Run install script?")
-			return 
+			sylog.Errorf("No DMTCP location found. Run install script? or set SINGULARITY_DMTCP env variable")
+			return
 		}
 		origBind := c.GetBindPath()
-		
 		//Build new mount path
-		var b singularity.BindPath
-		b.Source = dmtcpLocation
-		b.Destination = "/.dmtcp/"
-		
+		var dmtcpBind singularity.BindPath
+		dmtcpBind.Source = dmtcpLocation
+		dmtcpBind.Destination = "/.dmtcp/"
+
+		var ckptBind singularity.BindPath
+		ckptBind.Source = "./"
+		ckptBind.Destination = "/.checkpoint/"
 		//Option for read only
-		var options = map[string]*singularity.BindOption{
+		var dmtcpOptions = map[string]*singularity.BindOption{
 			"ro":        &singularity.BindOption{},
 		}
-		b.Options = options
-		
+
+		//Option for read/write
+		var ckptOptions = map[string]*singularity.BindOption{
+			"rw":        &singularity.BindOption{},
+		}
+		dmtcpBind.Options = dmtcpOptions
+		ckptBind.Options = ckptOptions
 		//Set to include this new bind path
-		c.SetBindPath(append(origBind, b))
+		c.SetBindPath(append(origBind, dmtcpBind, ckptBind))
 	}
 	return
 }
-
-
 
