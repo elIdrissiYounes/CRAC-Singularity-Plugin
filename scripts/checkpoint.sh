@@ -1,2 +1,2 @@
 #!/bin/sh
-/.dmtcp/dmtcp/bin/dmtcp_command -c
+/.dmtcp/CRAC-early-development/bin/dmtcp_command -c
