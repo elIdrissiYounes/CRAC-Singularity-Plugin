@@ -8,7 +8,7 @@ function setupDMTCP {
 		echo "export SINGULARITY_CRAC=$scriptdir" | sudo tee -a /etc/profile
 	fi
 	cd $scriptdir/CRAC-early-development/
-	./configure --enable-timing
+	./configure --enable-timing --enable-singularity
 	make -j
 	cd contrib/split-cuda/
 	make

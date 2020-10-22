@@ -254,9 +254,9 @@ func callbackDMTCP(common *config.Common) {
 	}
 	//Add bind for DMTCP if in environment.
 	if isCheckpoint{
-		dmtcpLocation := os.Getenv("SINGULARITY_DMTCP")
+		dmtcpLocation := os.Getenv("SINGULARITY_CRAC")
 		if(dmtcpLocation == ""){
-			sylog.Errorf("No DMTCP location found. Run install script? or set SINGULARITY_DMTCP env variable")
+			sylog.Errorf("No DMTCP location found. Run install script? or set SINGULARITY_CRAC env variable")
 			return
 		}
 		origBind := c.GetBindPath()
